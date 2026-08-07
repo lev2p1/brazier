@@ -191,8 +191,13 @@ net::awaitable<void> lightlib::Server::handle_connection(tcp::socket socket) {
             co_await Router::handle_request(req, res);
 
             if (res.body().empty() && res.count(http::field::content_length) == 0) {
+                res.content_length(0);
+            }
+            else if (!res.body().empty() && res.count(http::field::content_length) == 0) {
                 res.content_length(res.body().size());
             }
+
+            res.prepare_payload();
 
             co_await http::async_write(socket, res, net::use_awaitable);
 

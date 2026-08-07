@@ -30,33 +30,11 @@ The framework combines the power of Boost.Asio with modern C++20/23 features.
 - **Linux** (Ubuntu 20.04+, CentOS 8+)
 - **macOS** 11+
 
-lightlib **requires** a `.env` file in the project root with the following parameters:
-
-```text
-# Server settings
-S_HOST=127.0.0.1
-S_PORT=3500
-
-# PostgreSQL database
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
-DB_DATABASE=lightlib_db
-
-# Redis for caching and sessions
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-
-# Security
-AUTH_SECRET=your_super_secret_jwt_key_here
-```
-
 ## Project structure
 
 ```text
 your_project/
-├── .env                         # Environment configuration
+├── config.json                  # Environment configuration
 ├── CMakeLists.txt               # Build file
 ├── vcpkg.json                   # vcpkg dependencies
 ├── your_project/
@@ -259,8 +237,6 @@ sh build.sh
     "host": "127.0.0.1",
     "port": 6379
   },
-  
-  // Filesystem Settings
   "filesystem": {
     "drivers": {
       "local": {
@@ -1052,41 +1028,50 @@ boost::asio::awaitable<void> authEndpoint(const Request& req, Response& res, con
 res.result(http::status::ok);
 res.body() = json.dump();
 res.set(http::field::content_type, "application/json");
+res.prepare_payload();
 
 // 201 Created
 res.result(http::status::created);
 res.body() = createdResource.toJson().dump();
 res.set(http::field::location, "/api/users/" + std::to_string(id));
+res.prepare_payload();
 
 // 204 No Content (for DELETE)
 res.result(http::status::no_content);
 res.body() = "";
+res.prepare_payload();
 
 // 400 Bad Request
 res.result(http::status::bad_request);
 res.body() = R"({"error":"Invalid input"})";
+res.prepare_payload();
 
 // 401 Unauthorized
 res.result(http::status::unauthorized);
 res.set(http::field::www_authenticate, "Bearer");
 res.body() = R"({"error":"Authentication required"})";
+res.prepare_payload();
 
 // 403 Forbidden
 res.result(http::status::forbidden);
 res.body() = R"({"error":"Access denied"})";
+res.prepare_payload();
 
 // 404 Not Found
 res.result(http::status::not_found);
 res.body() = R"({"error":"Resource not found"})";
+res.prepare_payload();
 
 // 405 Method Not Allowed
 res.result(http::status::method_not_allowed);
 res.set(http::field::allow, "GET, POST");
 res.body() = R"({"error":"Method not allowed"})";
+res.prepare_payload();
 
 // 500 Internal Server Error
 res.result(http::status::internal_server_error);
 res.body() = R"({"error":"Internal server error"})";
+res.prepare_payload();
 ```
 
 #### Setting custom headers

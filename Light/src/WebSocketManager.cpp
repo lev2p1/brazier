@@ -121,4 +121,14 @@ namespace lightlib {
         }
     }
 
+    std::shared_ptr<WebSocketSession> WebSocketManager::get_session(const std::string& session_id) {
+        std::shared_lock lock(mutex_);
+        for (auto& session : sessions_) {
+            if (session && session->get_id() == session_id) {
+                return session;
+            }
+        }
+        return nullptr;
+    }
+
 }

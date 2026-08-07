@@ -40,6 +40,8 @@ namespace lightlib {
 
         void close_all();
 
+        std::shared_ptr<WebSocketSession> get_session(const std::string& session_id);
+
         size_t get_session_count() const { return session_count_.load(std::memory_order_acquire); }
 
         void set_global_message_handler(WebSocketSession::MessageHandler handler);

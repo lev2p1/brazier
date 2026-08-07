@@ -56,7 +56,7 @@ namespace lightlib {
         }
 
     public:
-        explicit Model(const std::shared_ptr<Database>& db = getDefaultDatabase()) : database(db) {}
+        Model(const std::shared_ptr<Database>& db = getDefaultDatabase()) : database(db) {}
 
         virtual ~Model() = default;
 
