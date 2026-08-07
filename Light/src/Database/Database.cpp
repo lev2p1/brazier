@@ -20,6 +20,9 @@
 
 #include "../../include/lightlib/Database/Database.hpp"
 
+#include "boost/asio/redirect_error.hpp"
+#include "boost/asio/posix/stream_descriptor.hpp"
+
 using namespace lightlib;
 
 Database::Database() {
@@ -62,6 +65,59 @@ void lightlib::Database::execute(const std::string& query) {
         throw std::runtime_error(error);
     }
     PQclear(res);
+}
+// WORK IN PROGRESS (multithreaded connections)
+boost::asio::awaitable<void> lightlib::Database::execute_async(const std::string& query) {
+    Logger::log("SQL Async Query: " + query, "INFO");
+
+    if (!conn_) {
+        throw std::runtime_error("Database not connected (connection is null)");
+    }
+
+    if (PQsendQuery(conn_, query.c_str()) == 0) {
+        throw std::runtime_error("Failed to send query: " + std::string(PQerrorMessage(conn_)));
+    }
+    const int sock = PQsocket(conn_);
+    if (sock < 0) {
+        throw std::runtime_error("Invalid socket descriptor");
+    }
+
+    boost::asio::posix::stream_descriptor stream(
+        co_await boost::asio::this_coro::executor,
+        sock
+    );
+
+    for (;;) {
+        while (PQisBusy(conn_)) {
+            boost::system::error_code ec;
+            co_await stream.async_wait(
+                boost::asio::posix::stream_descriptor::wait_read,
+                   boost::asio::redirect_error(boost::asio::use_awaitable, ec)
+                );
+            if (ec) {
+                throw std::runtime_error("Socket wait error: " + ec.message());
+            }
+        }
+
+        PGresult* res = PQgetResult(conn_);
+        if (!res) {
+            break;
+        }
+
+        ExecStatusType status = PQresultStatus(res);
+        if (status != PGRES_COMMAND_OK && status != PGRES_TUPLES_OK) {
+            PQclear(res);
+
+            if (in_transaction_) {
+                PQexec(conn_, "ROLLBACK");
+                in_transaction_ = false;
+            }
+
+            throw std::runtime_error("Query failed: " + std::string(PQerrorMessage(conn_)));
+        }
+
+        PQclear(res);
+    }
 }
 
 void lightlib::Database::transaction(const std::string name)

@@ -33,6 +33,7 @@
 #include "../SQLQueryBuilder.hpp"
 #include "../SQLString.hpp"
 #include "../Collection.hpp"
+#include <boost/asio/awaitable.hpp>
 
 namespace lightlib {
 
@@ -97,9 +98,9 @@ namespace lightlib {
             throw std::invalid_argument("Attribute '" + key + "' not found.");
         }
 
-        bool save() {
+        boost::asio::awaitable<bool> save() {
             if (!validate() || !beforeSave()) {
-                return false;
+                co_return false;
             }
 
             if (!database) {
@@ -108,14 +109,14 @@ namespace lightlib {
 
             if (attributes.empty()) {
                 Logger::log("Attributes are empty", "ERROR");
-                return false;
+                co_return false;
             }
 
             std::map<std::string, std::string> insertValues;
             PGconn* conn = database->getConnection();
             if (!conn) {
                 Logger::log("Failed to get database connection", "ERROR");
-                return false;
+                co_return false;
             }
             for (const auto& [key, value] : attributes) {
                 insertValues[key] = SQLString::EscapeString(conn, value);
@@ -123,7 +124,7 @@ namespace lightlib {
 
             if (insertValues.empty()) {
                 Logger::log("Insert values are empty. Aborting save operation", "ERROR");
-                return false;
+                co_return false;
             }
 
             SQLQueryBuilder builder(Derived::table_name);
@@ -131,13 +132,13 @@ namespace lightlib {
             std::string query = builder.get();
 
             try {
-                database->execute(query);
+                co_await database->execute_async(query);
                 afterSave();
-                return true;
+                co_return true;
             }
             catch (const std::exception& e) {
                 Logger::log(e.what(), "ERROR");
-                return false;
+                co_return false;
             }
         }
 
@@ -189,12 +190,12 @@ namespace lightlib {
             }
         }
 
-        static void update(int id, const std::map<std::string, std::string>& data, const std::shared_ptr<Database>& db = getDefaultDatabase()) {
+        static boost::asio::awaitable<void> update(int id, const std::map<std::string, std::string>& data, const std::shared_ptr<Database>& db = getDefaultDatabase()) {
             try {
                 PGconn* conn = db->getConnection();
                 if (!conn) {
                     Logger::log("Failed to get database connection", "ERROR");
-                    return;
+                    co_return;
                 }
                 SQLQueryBuilder builder(Derived::table_name);
                 std::map<std::string, std::string> updateValues;
@@ -205,73 +206,73 @@ namespace lightlib {
                 }
                 if (updateValues.empty()) {
                     Logger::log("No valid fields provided for update", "WARNING");
-                    return;
+                    co_return;
                 }
                 builder.Update(updateValues).Where("id = " + SQLString::EscapeString(conn, std::to_string(id)));
-                db->execute(builder.get());
+                co_await db->execute_async(builder.get());
             }
             catch (const std::exception& e) {
                 Logger::log("Update failed: " + std::string(e.what()), "ERROR");
             }
         }
 
-        void delete_() {
+        boost::asio::awaitable<void> delete_() {
             try {
                 if (!database) database = getDefaultDatabase();
                 PGconn* conn = database->getConnection();
                 if (!conn) {
                     Logger::log("Failed to get database connection", "ERROR");
-                    return;
+                    co_return;
                 }
                 SQLQueryBuilder builder(Derived::table_name);
                 auto id = getAttribute("id");
                 if (id.empty()) {
                     Logger::log("ID attribute is missing", "ERROR");
-                    return;
+                    co_return;
                 }
                 builder.Delete().Where("id = " + SQLString::EscapeString(conn, id));
                 std::string query = builder.get();
-                database->execute(query);
+                co_await database->execute_async(query);
             }
             catch (const std::exception& e) {
                 Logger::log("Delete failed: " + std::string(e.what()), "ERROR");
             }
         }
 
-        static void deleteById(int id, const std::shared_ptr<Database>& db = getDefaultDatabase()) {
+        static boost::asio::awaitable<void> deleteById(int id, const std::shared_ptr<Database>& db = getDefaultDatabase()) {
             try {
                 PGconn* conn = db->getConnection();
                 if (!conn) {
                     Logger::log("Failed to get database connection", "ERROR");
-                    return;
+                    co_return;
                 }
                 SQLQueryBuilder builder(Derived::table_name);
                 builder.Delete().Where("id = " + SQLString::EscapeString(conn, std::to_string(id)));
                 std::string query = builder.get();
-                db->execute(query);
+                co_await db->execute_async(query);
             }
             catch (const std::exception& e) {
                 Logger::log("Delete by ID failed: " + std::string(e.what()), "ERROR");
             }
         }
 
-        static bool deleteWhere(const std::string& condition, const std::shared_ptr<Database>& db = getDefaultDatabase()) {
+        static boost::asio::awaitable<bool> deleteWhere(const std::string& condition, const std::shared_ptr<Database>& db = getDefaultDatabase()) {
             try {
                 PGconn* conn = db->getConnection();
                 if (!conn) {
                     Logger::log("Failed to get database connection", "ERROR");
-                    return false;
+                    co_return false;
                 }
                 SQLQueryBuilder builder(Derived::table_name);
                 builder.Delete().Where(condition);
                 std::string query = builder.get();
-                db->execute(query);
+                co_await db->execute_async(query);
 
-                return true;
+                co_return true;
             }
             catch (const std::exception& e) {
                 Logger::log("Delete where failed: " + std::string(e.what()), "ERROR");
-                return false;
+                co_return false;
             }
         }
 
@@ -290,17 +291,17 @@ namespace lightlib {
 			@return True if all models were saved successfully, false otherwise.
 			@note This method will attempt to batch insert and update models based on their primary key. If a model has a primary key, it will be updated; otherwise, it will be inserted.
         */
-        static bool saveMany(const std::vector<std::shared_ptr<Derived>>& models, const std::shared_ptr<Database>& db = getDefaultDatabase()) {
+        static boost::asio::awaitable<bool> saveMany(const std::vector<std::shared_ptr<Derived>>& models, const std::shared_ptr<Database>& db = getDefaultDatabase()) {
             PGconn* conn = db->getConnection();
 
             if (!conn) {
                 Logger::log("Failed to get database connection", "ERROR");
-                return false;
+                co_return false;
             }
 
             if (models.empty()) {
                 Logger::log("No models to save", "WARNING");
-                return false;
+                co_return false;
             }
 
             const auto& first = models.front();
@@ -355,18 +356,18 @@ namespace lightlib {
                     }
                     catch (const std::exception& e) {
                         Logger::log("Failed to update model: " + std::string(e.what()), "ERROR");
-                        return false;
+                        co_return false;
                     }
                 }
 
                 std::string finalQuery = batchQuery.str();
                 if (!finalQuery.empty()) {
                     try {
-                        db->execute(finalQuery);
+                        co_await db->execute_async(finalQuery);
                     }
                     catch (const std::exception& e) {
                         Logger::log("Batch update error: " + std::string(e.what()), "ERROR");
-                        return false;
+                        co_return false;
                     }
                 }
             }
@@ -385,7 +386,7 @@ namespace lightlib {
 
                 if (columns.empty()) {
                     Logger::log("No columns found for insert", "WARNING");
-                    return false;
+                    co_return false;
                 }
 
                 std::string valuesStr;
@@ -416,15 +417,15 @@ namespace lightlib {
 
                 try {
                     Logger::log("INSERT Query: " + query, "INFO");
-                    db->execute(query);
+                    co_await db->execute_async(query);
                 }
                 catch (const std::exception& e) {
                     Logger::log("Batch insert error: " + std::string(e.what()), "ERROR");
-                    return false;
+                    co_return false;
                 }
             }
 
-            return true;
+            co_return true;
         }
 
         static Collection<Derived> all(const std::shared_ptr<Database>& db = getDefaultDatabase()) {

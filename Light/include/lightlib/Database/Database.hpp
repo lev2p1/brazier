@@ -43,6 +43,8 @@ namespace lightlib {
         void rollback(const std::string name);
         void commit();
 
+        boost::asio::awaitable<void> execute_async(const std::string& sql);
+
         bool isInTransaction() const { return in_transaction_; }
 
         std::string query(const std::string& sql);
@@ -51,6 +53,8 @@ namespace lightlib {
         std::vector<std::map<std::string, std::string>> queryToVector(const std::string& sql_template, const std::vector<std::string>& params = {});
 
         PGconn* getConnection() const { return conn_; }
+
+        boost::asio::awaitable<PGconn*> getConnection_async() const { co_return conn_; }
 
     private:
         PGconn* conn_;
