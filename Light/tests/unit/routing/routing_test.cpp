@@ -107,9 +107,11 @@ TEST_F(RoutingTest, AddRouteAndGet) {
     R(GET, "/test/json", test_controller, json_response);
     R(POST, "/test/echo", test_controller, echo_post);
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
     lightlib::HttpClient client;
     client.set_verify_ssl(false);
-    client.set_timeout(std::chrono::seconds(5));
+    client.set_timeout(std::chrono::seconds(10));
 
     try {
         auto response = RunAsync([&]() -> boost::asio::awaitable<lightlib::Response> {

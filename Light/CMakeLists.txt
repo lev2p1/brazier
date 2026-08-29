@@ -6,12 +6,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(WIN32)
-    set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/vcpkg_installed/x64-windows" CACHE STRING "")
-elseif(UNIX)
-    set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/vcpkg_installed/x64-linux" CACHE STRING "")
-endif()
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(WIN32)
     set(CMAKE_THREAD_PREFER_PTHREAD OFF)
@@ -187,7 +182,7 @@ install(
     DESTINATION share/lightlib
 )
 
-option(BUILD_TESTS "Build tests" OFF)
+option(BUILD_TESTS "Build tests" ON)
 
 if(BUILD_TESTS)
     message(STATUS "Building tests")
@@ -229,8 +224,10 @@ if(BUILD_TESTS)
         ${LIBRARIES}
     )
 
-    include(GoogleTest)
-    gtest_discover_tests(lightlib_tests)
+    # include(GoogleTest)
+    # gtest_discover_tests(lightlib_tests)
+
+    # add_test(NAME lightlib_tests COMMAND lightlib_tests)
 
     add_custom_target(check
         COMMAND $<TARGET_FILE:lightlib_tests>

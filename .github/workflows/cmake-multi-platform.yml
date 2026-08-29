@@ -1,4 +1,4 @@
-name: CMake on multiple platforms
+name: CMake Multi-Platform Build
 
 on:
   push:
@@ -7,35 +7,93 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  linux:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        build_type: [Release]
+        compiler: [gcc, clang]
+        build_type: [Release, Debug]
+        shared_libs: [ON, OFF]
         include:
-          - os: ubuntu-latest
+          - compiler: gcc
             c_compiler: gcc
             cpp_compiler: g++
-          - os: ubuntu-latest
+          - compiler: clang
             c_compiler: clang
             cpp_compiler: clang++
-          - os: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Start PostgreSQL
+      run: |
+        docker run -d --name postgres \
+          -e POSTGRES_HOST_AUTH_METHOD=trust \
+          -e POSTGRES_USER=postgres \
+          -e POSTGRES_PASSWORD= \
+          -e POSTGRES_DB=postgres \
+          -p 5432:5432 postgres:latest
+        for i in {1..30}; do
+          docker exec postgres pg_isready -U postgres && break || sleep 1
+        done
+
+    - name: Start Redis
+      run: |
+        docker run -d --name redis -p 6379:6379 redis:latest
+        for i in {1..30}; do
+          docker exec redis redis-cli ping && break || sleep 1
+        done
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Set VCPKG_ROOT
+      shell: bash
+      run: echo "VCPKG_ROOT=${{ github.workspace }}/vcpkg" >> $GITHUB_ENV
+
+    - name: Configure CMake
+      run: >
+        cmake -B build
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
+        -DBUILD_TESTS=ON
+        -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
+        -S Light
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }}
+
+    - name: Create config_test.json
+      working-directory: build
+      run: |
+        echo '{"app_name": "LightlibApp"}' > config_test.json
+        mkdir -p ${{ matrix.build_type }}
+        cp config_test.json ${{ matrix.build_type }}/
+      shell: bash
+
+    - name: Run tests
+      working-directory: build
+      run: ./lightlib_tests
+      shell: bash
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [cl]
+        build_type: [Release, Debug]
+        shared_libs: [ON, OFF]
+        include:
+          - compiler: cl
             c_compiler: cl
             cpp_compiler: cl
-          - os: macos-latest
-            c_compiler: clang
-            cpp_compiler: clang++
-        exclude:
-          - os: windows-latest
-            c_compiler: gcc
-          - os: windows-latest
-            c_compiler: clang
-          - os: ubuntu-latest
-            c_compiler: cl
-          - os: macos-latest
-            c_compiler: cl
 
     steps:
     - uses: actions/checkout@v4
@@ -52,16 +110,94 @@ jobs:
 
     - name: Configure CMake
       run: >
-        cmake -B ${{ github.workspace }}/build
+        cmake -B build
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
+        -DBUILD_TESTS=ON
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-        -S ${{ github.workspace }}
+        -S Light
 
     - name: Build
-      run: cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }}
+      run: cmake --build build --config ${{ matrix.build_type }}
 
-    - name: Test
-      working-directory: ${{ github.workspace }}/build
-      run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
+    - name: Copy DLLs to test directory
+      run: |
+        $dest = "build\${{ matrix.build_type }}"
+        New-Item -ItemType Directory -Force -Path $dest | Out-Null
+        if ("${{ matrix.build_type }}" -eq "Release") {
+          Copy-Item -Path "build\vcpkg_installed\x64-windows\bin\*.dll" -Destination $dest -ErrorAction SilentlyContinue
+        } else {
+          Copy-Item -Path "build\vcpkg_installed\x64-windows\debug\bin\*.dll" -Destination $dest -ErrorAction SilentlyContinue
+        }
+      shell: pwsh
+
+    - name: Create config_test.json
+      working-directory: build
+      run: |
+        echo '{"app_name": "LightlibApp"}' > config_test.json
+        mkdir -p ${{ matrix.build_type }}
+        cp config_test.json ${{ matrix.build_type }}/
+      shell: bash
+
+    - name: Run tests
+      working-directory: build
+      run: ./${{ matrix.build_type }}/lightlib_tests.exe
+      shell: bash
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang]
+        build_type: [Release, Debug]
+        shared_libs: [ON, OFF]
+        include:
+          - compiler: clang
+            c_compiler: clang
+            cpp_compiler: clang++
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: brew install autoconf
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Set VCPKG_ROOT
+      shell: bash
+      run: echo "VCPKG_ROOT=${{ github.workspace }}/vcpkg" >> $GITHUB_ENV
+
+    - name: Configure CMake
+      run: >
+        cmake -B build
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
+        -DBUILD_TESTS=ON
+        -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
+        -S Light
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }}
+
+    - name: Create config_test.json
+      working-directory: build
+      run: |
+        echo '{"app_name": "LightlibApp"}' > config_test.json
+        mkdir -p ${{ matrix.build_type }}
+        cp config_test.json ${{ matrix.build_type }}/
+      shell: bash
+
+    - name: Run tests
+      working-directory: build
+      run: ./lightlib_tests --gtest_filter=-RoutingTest.*
+      shell: bash

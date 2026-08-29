@@ -19,6 +19,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <algorithm>
 #include "../../../include/lightlib/Filesystem/StorageManager.hpp"
 #include "../../../include/lightlib/Filesystem/FileDriver.hpp"
 
