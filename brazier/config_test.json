@@ -1,0 +1,18 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 3502
+  },
+  "app_name": "brazierApp",
+  "filesystem": {
+    "drivers": {
+      "local": {
+        "root": "./storage"
+      },
+      "root": {
+        "root": "./"
+      },
+      "default": "local"
+    }
+  }
+}
