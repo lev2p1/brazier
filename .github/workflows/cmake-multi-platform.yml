@@ -64,7 +64,7 @@ jobs:
         -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
         -DBUILD_TESTS=ON
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-        -S Light
+        -S brazier
 
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }}
@@ -117,7 +117,7 @@ jobs:
         -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
         -DBUILD_TESTS=ON
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-        -S Light
+        -S brazier
 
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }}
@@ -184,7 +184,7 @@ jobs:
         -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
         -DBUILD_TESTS=ON
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-        -S Light
+        -S brazier
 
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }}
