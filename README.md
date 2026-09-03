@@ -1,6 +1,6 @@
-# brazier Framework
+# Brazier Framework
 
-brazier is a modern C++ MVC framework designed for creating high-performance asynchronous APIs.
+Brazier is a modern C++ MVC framework designed for creating high-performance asynchronous APIs.
 The framework combines the power of Boost.Asio with modern C++20/23 features.
 
 ## Features
@@ -22,7 +22,7 @@ The framework combines the power of Boost.Asio with modern C++20/23 features.
 - **vcpkg** (C++ dependency manager)
 - **C++ compiler** with C++20 support (GCC 10+, Clang 10+, MSVC 2019 16.8+)
 - **.env file** with environment configuration
-- **brazier libraries** (pre-built)
+- **Brazier libraries** (pre-built)
 
 ### **Supported platforms:**
 
@@ -200,7 +200,7 @@ Add all the other packages you need to the end of the list
 sh build.sh
 ```
 
-## brazier configuration
+## Brazier configuration
 
 ### Overview
 
@@ -288,9 +288,9 @@ config.setAutoSave(true);    // Auto-save on changes
 config.setAutoSave(false);   // Manual save only
 config.clear();              // Clear all values
 ```
-## brazier Logging System
+## Brazier Logging System
 
-brazier provides a high-performance logging system with colored output, log rotation, and signal handling.
+Brazier provides a high-performance logging system with colored output, log rotation, and signal handling.
 Logging is done both to file and console with color coding.
 
 
@@ -368,9 +368,9 @@ Logger::log("Security audit", "AUDIT");
 
 The brazier logging system is ready for use in production environments and provides all necessary functions for effective application monitoring and debugging.
 
-## brazier Routing System
+## Brazier Routing System
 
-brazier provides a powerful routing system with support for asynchronous handlers, parameterized paths, and CORS.
+Brazier provides a powerful routing system with support for asynchronous handlers, parameterized paths, and CORS.
 The system is built on Boost.Beast and Boost.Asio coroutines.
 
 ### 1. Router
@@ -472,9 +472,9 @@ boost::asio::awaitable<void> createUser(const Request& req, Response& res, const
 }
 ```
 
-## brazier WebSocket Routing System
+## Brazier WebSocket Routing System
 
-brazier provides a complete WebSocket routing system with support for parameterized paths, multiple message types, and global handlers. The system integrates seamlessly with the existing HTTP router.
+Brazier provides a complete WebSocket routing system with support for parameterized paths, multiple message types, and global handlers. The system integrates seamlessly with the existing HTTP router.
 
 ### WebSocket Router
 
@@ -1087,7 +1087,7 @@ res.set("X-RateLimit-Remaining", "95");
 
 ## Helpers in brazier Framework
 
-brazier provides a comprehensive set of utility classes (helpers) for common tasks:
+Brazier provides a comprehensive set of utility classes (helpers) for common tasks:
 - working with cookies; 
 - code generation;
 - data validation; 
