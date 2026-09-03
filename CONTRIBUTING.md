@@ -1,13 +1,13 @@
-# Contributing to lightlib
+# Contributing to brazier
 
- First off, thank you for considering contributing to lightlib. It's people
- like you that make lightlib a great tool.
+ First off, thank you for considering contributing to brazier. It's people
+ like you that make brazier a great tool.
 
 ## Code of Conduct
 
- This project and everyone participating in it is governed by the lightlib
+ This project and everyone participating in it is governed by the brazier
  Code of Conduct. By participating, you are expected to uphold this code.
- Please report unacceptable behavior to **hello@lightlib.org**.
+ Please report unacceptable behavior to **hello@brazier.org**.
 
 ## How Can I Contribute?
 
@@ -24,7 +24,7 @@
  - Include code snippets or links to repositories that demonstrate the issue
 
  **Please do not report security vulnerabilities in public issues!**
- Instead, report by email to **hello@lightlib.org** with `[SECURITY]` in the
+ Instead, report by email to **hello@brazier.org** with `[SECURITY]` in the
  subject line.
 
 ### Suggesting Enhancements
@@ -53,11 +53,11 @@
 ## Getting Started
 
  1. Fork the repository on GitHub:
-    `https://github.com/lev2p1/lightlib`
+    `https://github.com/lev2p1/brazier`
  2. Clone your fork:
     ```bash
-    git clone https:github.ru/your-username/lightlib.git
-    cd lightlib
+    git clone https:github.ru/your-username/brazier.git
+    cd brazier
     ```
  3. Build the project using CMake and vcpkg:
     ```bash
@@ -73,7 +73,7 @@
 
 ### C++ Style Guide
 
- Based on the existing lightlib code style (see `Model.hpp` for reference):
+ Based on the existing brazier code style (see `Model.hpp` for reference):
 
  - Use 4 spaces for indentation (not tabs)
  - Use `snake_case` for functions and variables
@@ -86,7 +86,7 @@
    1. Corresponding header for the .cpp file
    2. C++ standard library headers (`<string>`, `<vector>`, `<map>`, etc.)
    3. Third-party library headers (`<nlohmann/json.hpp>`)
-   4. lightlib internal headers (`Database.hpp`, `Logger.hpp`, etc.)
+   4. brazier internal headers (`Database.hpp`, `Logger.hpp`, etc.)
 
 ### Required License Header
 
@@ -97,20 +97,20 @@
   * Copyright (c) 2025 Kirill Sergeev, Nikolay Sugonyako, Andrey Agarkov, Gleb Safyannikov
   * SPDX-License-Identifier: LGPL-3.0-or-later
   *
-  * This file is part of lightlib.
+  * This file is part of brazier.
   *
-  * lightlib is free software; you can redistribute it and/or modify
+  * brazier is free software; you can redistribute it and/or modify
   * it under the terms of the GNU Lesser General Public License as published by
   * the Free Software Foundation; either version 3 of the License, or
   * (at your option) any later version.
   *
-  * lightlib is distributed in the hope that it will be useful,
+  * brazier is distributed in the hope that it will be useful,
   * but WITHOUT ANY WARRANTY; without even the implied warranty of
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   * GNU Lesser General Public License for more details.
   *
   * You should have received a copy of the GNU Lesser General Public License
-  * along with lightlib; if not, see <https:www.gnu.org/licenses/>.
+  * along with brazier; if not, see <https:www.gnu.org/licenses/>.
   */
  ```
 
@@ -132,7 +132,7 @@
  Following the pattern from `Model.hpp`:
 
  ```cpp
- namespace lightlib {
+ namespace brazier {
 
  template <typename Derived>
  class Model {
@@ -156,7 +156,7 @@
      std::map<std::string, std::string> attributes;
  };
 
- }  namespace lightlib
+ }  namespace brazier
  ```
 
 ## Sign Your Commits
@@ -170,7 +170,7 @@
 
  The sign-off line should look like:
  ```
- Signed-off-by: Kirill Sergeev <kirill@lightlib.org>
+ Signed-off-by: Kirill Sergeev <kirill@brazier.org>
  ```
 
  By signing off, you agree to the
@@ -218,9 +218,9 @@
 
 ## License
 
- By contributing to lightlib, you agree that your contributions will be
+ By contributing to brazier, you agree that your contributions will be
  licensed under LGPL-3.0-or-later.
 
  ----------------------------------------------------------------------------
- Thank you for contributing to lightlib!
+ Thank you for contributing to brazier!
  ----------------------------------------------------------------------------*/*/

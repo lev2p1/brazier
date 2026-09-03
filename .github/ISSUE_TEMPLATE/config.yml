@@ -2,13 +2,13 @@ blank_issues_enabled: false
 
 contact_links:
    - name: Discussions - Ideas
-     url: https://github.com/lev2p1/lightlib/discussions/categories/ideas
+     url: https://github.com/lev2p1/brazier/discussions/categories/ideas
      about: Share and discuss new feature ideas
 
    - name: Documentation
-     url: https://github.com/lev2p1/lightlib/wiki
+     url: https://github.com/lev2p1/brazier/wiki
      about: Read the official documentation
 
    - name: Security Issues
-     url: https://github.com/lev2p1/lightlib/security/advisories
+     url: https://github.com/lev2p1/brazier/security/advisories
      about: Report security vulnerabilities privately

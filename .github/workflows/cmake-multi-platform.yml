@@ -64,7 +64,7 @@ jobs:
         -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
         -DBUILD_TESTS=ON
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-        -S Light
+        -S brazier
 
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }}
@@ -72,14 +72,14 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "LightlibApp"}' > config_test.json
+        echo '{"app_name": "brazierApp"}' > config_test.json
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
       shell: bash
 
     - name: Run tests
       working-directory: build
-      run: ./lightlib_tests
+      run: ./brazier_tests
       shell: bash
 
   windows:
@@ -117,7 +117,7 @@ jobs:
         -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
         -DBUILD_TESTS=ON
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-        -S Light
+        -S brazier
 
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }}
@@ -136,14 +136,14 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "LightlibApp"}' > config_test.json
+        echo '{"app_name": "brazierApp"}' > config_test.json
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
       shell: bash
 
     - name: Run tests
       working-directory: build
-      run: ./${{ matrix.build_type }}/lightlib_tests.exe
+      run: ./${{ matrix.build_type }}/brazier_tests.exe
       shell: bash
 
   macos:
@@ -184,7 +184,7 @@ jobs:
         -DBUILD_SHARED_LIBS=${{ matrix.shared_libs }}
         -DBUILD_TESTS=ON
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-        -S Light
+        -S brazier
 
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }}
@@ -192,12 +192,12 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "LightlibApp"}' > config_test.json
+        echo '{"app_name": "brazierApp"}' > config_test.json
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
       shell: bash
 
     - name: Run tests
       working-directory: build
-      run: ./lightlib_tests --gtest_filter=-RoutingTest.*
+      run: ./brazier_tests --gtest_filter=-RoutingTest.*
       shell: bash
