@@ -1,9 +1,0 @@
-.env
-/x64/
-/Build/
-/vcpkg_installed
-/build
-/.vscode
-/cmake-build-debug
-.clangd
-config.json

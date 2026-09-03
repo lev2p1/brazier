@@ -11,7 +11,7 @@
 
 **Please do not report security vulnerabilities through public issues.**
 
-Instead, report them by email to: **hello@lightlib.org**
+Instead, report them by email to: **hello@brazier.org**
 
 ### What to Include
 
@@ -54,7 +54,7 @@ We follow coordinated disclosure:
 
 ### In Scope
 
-- Vulnerabilities in lightlib source code
+- Vulnerabilities in brazier source code
 - Security issues in build configuration
 - Dependency vulnerabilities (reported to us, we will update)
 
@@ -78,8 +78,8 @@ Credit can be anonymous if requested.
 
 ## License
 
-lightlib is licensed under LGPL-3.0-or-later.
+brazier is licensed under LGPL-3.0-or-later.
 
 ---
 
-Thank you for helping keep lightlib and its users safe.
+Thank you for helping keep brazier and its users safe.

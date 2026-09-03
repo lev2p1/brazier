@@ -1,6 +1,6 @@
-# lightlib Framework
+# brazier Framework
 
-lightlib is a modern C++ MVC framework designed for creating high-performance asynchronous APIs.
+brazier is a modern C++ MVC framework designed for creating high-performance asynchronous APIs.
 The framework combines the power of Boost.Asio with modern C++20/23 features.
 
 ## Features
@@ -22,7 +22,7 @@ The framework combines the power of Boost.Asio with modern C++20/23 features.
 - **vcpkg** (C++ dependency manager)
 - **C++ compiler** with C++20 support (GCC 10+, Clang 10+, MSVC 2019 16.8+)
 - **.env file** with environment configuration
-- **lightlib libraries** (pre-built)
+- **brazier libraries** (pre-built)
 
 ### **Supported platforms:**
 
@@ -40,7 +40,7 @@ your_project/
 ├── your_project/
 │   └── Proj.cpp           # Main application file
 ├── libs/
-│   └── lightlib/
+│   └── brazier/
 │       ├── x64-windows/        # Windows libraries
 │       └── x64-linux/          # Linux libraries
 └── include/                    # Header files
@@ -81,33 +81,33 @@ find_package(OpenSSL REQUIRED)
 # Add all the other packages you need here
 
 if(WIN32)
-    set(lightlib_DIR "${CMAKE_SOURCE_DIR}/libs/lightlib/x64-windows")
+    set(brazier_DIR "${CMAKE_SOURCE_DIR}/libs/brazier/x64-windows")
 elseif(UNIX)
-    set(lightlib_DIR "${CMAKE_SOURCE_DIR}/libs/lightlib/x64-linux")
+    set(brazier_DIR "${CMAKE_SOURCE_DIR}/libs/brazier/x64-linux")
 endif()
 
-add_library(lightlib SHARED IMPORTED)
+add_library(brazier SHARED IMPORTED)
 
 if(WIN32)
-    set_target_properties(lightlib PROPERTIES
-        IMPORTED_IMPLIB "${lightlib_DIR}/lib/lightlib.lib"
-        IMPORTED_LOCATION "${lightlib_DIR}/bin/lightlib.dll"
-        INTERFACE_INCLUDE_DIRECTORIES "${lightlib_DIR}/include"
+    set_target_properties(brazier PROPERTIES
+        IMPORTED_IMPLIB "${brazier_DIR}/lib/brazier.lib"
+        IMPORTED_LOCATION "${brazier_DIR}/bin/brazier.dll"
+        INTERFACE_INCLUDE_DIRECTORIES "${brazier_DIR}/include"
     )
 elseif(UNIX)
-    set_target_properties(lightlib PROPERTIES
-        IMPORTED_IMPLIB "${lightlib_DIR}/lib/liblightlib.a"
-        IMPORTED_LOCATION "${lightlib_DIR}/bin/liblightlib.dylib"
-        INTERFACE_INCLUDE_DIRECTORIES "${lightlib_DIR}/include"
+    set_target_properties(brazier PROPERTIES
+        IMPORTED_IMPLIB "${brazier_DIR}/lib/libbrazier.a"
+        IMPORTED_LOCATION "${brazier_DIR}/bin/libbrazier.dylib"
+        INTERFACE_INCLUDE_DIRECTORIES "${brazier_DIR}/include"
     )
 endif()
 
-target_include_directories(lightlib INTERFACE
-    "${lightlib_DIR}"
-    "${lightlib_DIR}/include"
+target_include_directories(brazier INTERFACE
+    "${brazier_DIR}"
+    "${brazier_DIR}/include"
 )
 
-target_link_libraries(lightlib INTERFACE
+target_link_libraries(brazier INTERFACE
     Boost::beast  
     Boost::asio
     Boost::filesystem
@@ -131,7 +131,7 @@ target_link_libraries(lightlib INTERFACE
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_NAME}/${PROJECT_NAME}.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE lightlib)
+target_link_libraries(${PROJECT_NAME} PRIVATE brazier)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
@@ -145,18 +145,18 @@ if(WIN32)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     
         COMMAND ${CMAKE_COMMAND} -E copy
-            "${lightlib_DIR}/bin/lightlib.dll"
+            "${brazier_DIR}/bin/brazier.dll"
             $<TARGET_FILE_DIR:${PROJECT_NAME}>
 
-        COMMENT "Copying lightlib.dll to output directory"
+        COMMENT "Copying brazier.dll to output directory"
     )
 elseif(UNIX)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-            "${lightlib_DIR}/bin/liblightlib.dylib"
+            "${brazier_DIR}/bin/libbrazier.dylib"
             $<TARGET_FILE_DIR:${PROJECT_NAME}>
 
-        COMMENT "Copying liblightlib.dylib to output directory"
+        COMMENT "Copying libbrazier.dylib to output directory"
     )
 endif()
 ```
@@ -200,11 +200,11 @@ Add all the other packages you need to the end of the list
 sh build.sh
 ```
 
-## lightlib configuration
+## brazier configuration
 
 ### Overview
 
-`ConfigManager` is a flexible configuration management system in lightlib that provides:
+`ConfigManager` is a flexible configuration management system in brazier that provides:
 - Loading configuration from JSON files
 - Working with nested parameters using dot notation
 - Automatic saving of changes
@@ -254,7 +254,7 @@ sh build.sh
 To initialize the global configuration manager, you need to run `ConfigManager::initGlobal()` at the beginning of program execution.
 
 ```cpp
-#include <lightlib/vendor/ConfigManager.hpp>
+#include <brazier/vendor/ConfigManager.hpp>
 
 int main() {
     ConfigManager::initGlobal();
@@ -262,7 +262,7 @@ int main() {
     std::string host = global_config->get("server.host", "127.0.0.1");
     int port = global_config->get("server.port", 3501);
     
-    lightlib::Server server(host, port);
+    brazier::Server server(host, port);
     server.initialize();
     server.run();
     
@@ -288,9 +288,9 @@ config.setAutoSave(true);    // Auto-save on changes
 config.setAutoSave(false);   // Manual save only
 config.clear();              // Clear all values
 ```
-## lightlib Logging System
+## brazier Logging System
 
-lightlib provides a high-performance logging system with colored output, log rotation, and signal handling.
+brazier provides a high-performance logging system with colored output, log rotation, and signal handling.
 Logging is done both to file and console with color coding.
 
 
@@ -366,11 +366,11 @@ Logger::log("Security audit", "AUDIT");
 2024-01-15 14:30:27 [ERROR] Connection timeout
 ```
 
-The lightlib logging system is ready for use in production environments and provides all necessary functions for effective application monitoring and debugging.
+The brazier logging system is ready for use in production environments and provides all necessary functions for effective application monitoring and debugging.
 
-## lightlib Routing System
+## brazier Routing System
 
-lightlib provides a powerful routing system with support for asynchronous handlers, parameterized paths, and CORS.
+brazier provides a powerful routing system with support for asynchronous handlers, parameterized paths, and CORS.
 The system is built on Boost.Beast and Boost.Asio coroutines.
 
 ### 1. Router
@@ -472,9 +472,9 @@ boost::asio::awaitable<void> createUser(const Request& req, Response& res, const
 }
 ```
 
-## lightlib WebSocket Routing System
+## brazier WebSocket Routing System
 
-lightlib provides a complete WebSocket routing system with support for parameterized paths, multiple message types, and global handlers. The system integrates seamlessly with the existing HTTP router.
+brazier provides a complete WebSocket routing system with support for parameterized paths, multiple message types, and global handlers. The system integrates seamlessly with the existing HTTP router.
 
 ### WebSocket Router
 
@@ -690,19 +690,19 @@ Find matching route
 Close and Error: route + global both called
 ```
 
-## Controllers in lightlib Framework
+## Controllers in brazier Framework
 
-Controllers in lightlib are central components that handle HTTP requests and return responses.
+Controllers in brazier are central components that handle HTTP requests and return responses.
 They implement application business logic, work with data models, and form HTTP responses.
 
 ### Base structure
 
 ```cpp
-#include <lightlib/Core>
-#include <lightlib/DB>
-#include <lightlib/Http>
+#include <brazier/Core>
+#include <brazier/DB>
+#include <brazier/Http>
 
-class UserController : public lightlib::Controller {
+class UserController : public brazier::Controller {
 public:
     using Request = http::request<http::string_body>;
     using Response = http::response<http::string_body>;
@@ -739,7 +739,7 @@ You can override the REST methods.
 #### Overriding REST methods:
 
 ```cpp
-class UserController : public lightlib::Controller {
+class UserController : public brazier::Controller {
 public:
     // GET /users/:id - Get single user
     boost::asio::awaitable<void> show(const Request& req, Response& res, const Params& params) override {
@@ -798,7 +798,7 @@ public:
 You can add any number of custom methods beyond the base REST methods:
 
 ```cpp
-class UserController : public lightlib::Controller {
+class UserController : public brazier::Controller {
 public:
     // Custom method - not in base Controller
     boost::asio::awaitable<void> login(const Request& req, Response& res, const Params& params) {
@@ -865,7 +865,7 @@ void Controller::setCorsHeaders(const Request& req, Response& res) {
 #### Overriding CORS for specific controllers
 
 ```cpp
-class ApiController : public lightlib::Controller {
+class ApiController : public brazier::Controller {
 public:
     void setCors(const Request& req, Response& res) override {
         // Restrict to specific origin
@@ -877,7 +877,7 @@ public:
     }
 };
 
-class PublicController : public lightlib::Controller {
+class PublicController : public brazier::Controller {
 public:
     void setCors(const Request& req, Response& res) override {
         // Allow any origin (public API)
@@ -1085,9 +1085,9 @@ res.set("X-RateLimit-Limit", "100");
 res.set("X-RateLimit-Remaining", "95");
 ```
 
-## Helpers in lightlib Framework
+## Helpers in brazier Framework
 
-lightlib provides a comprehensive set of utility classes (helpers) for common tasks:
+brazier provides a comprehensive set of utility classes (helpers) for common tasks:
 - working with cookies; 
 - code generation;
 - data validation; 
@@ -1113,7 +1113,7 @@ Generate random codes for various purposes: verification codes, one-time passwor
 Single code generation
 
 ```cpp
-#include <lightlib/App/Http/Helpers/Code.hpp>
+#include <brazier/App/Http/Helpers/Code.hpp>
 
 // Alphanumeric code (letters + digits)
 std::string verificationCode = Code::generateRandomCode(16);
@@ -1185,7 +1185,7 @@ Simplified HTTP cookie handling: parsing cookies from requests and setting cooki
 **Parsing cookies from request**
 
 ```cpp
-#include <lightlib/App/Http/Helpers/Cookie.hpp>
+#include <brazier/App/Http/Helpers/Cookie.hpp>
 
 boost::asio::awaitable<void> show(const Request& req, Response& res, const Params& params) {
     // Get cookie header from request
@@ -1233,7 +1233,7 @@ boost::asio::awaitable<void> login(const Request& req, Response& res, const Para
 
 **Complete authentication example**
 ```cpp
-class AuthController : public lightlib::Controller {
+class AuthController : public brazier::Controller {
 public:
     boost::asio::awaitable<void> login(const Request& req, Response& res, const Params& params) {
         auto body = nlohmann::json::parse(req.body());
@@ -1299,7 +1299,7 @@ Validate user input data: passwords, email addresses, and other common data type
 **Basic validation**
 
 ```cpp
-#include <lightlib/App/Http/Helpers/Validator.hpp>
+#include <brazier/App/Http/Helpers/Validator.hpp>
 
 // Password validation
 if (Validator::password("MySecure123!")) {
@@ -1400,7 +1400,7 @@ if (!error.empty()) {
   Include the header:
 
   ```cpp
-  #include <lightlib/Http>
+  #include <brazier/Http>
   ```
   
   All request calls must be performed inside a coroutine launched via `net::co_spawn` or similar.
@@ -1408,11 +1408,11 @@ if (!error.empty()) {
   #### Basic GET Request
 
   ```cpp
-  #include <lightlib/Http>
+  #include <brazier/Http>
   #include <boost/asio/co_spawn.hpp>
   #include <boost/asio/use_awaitable.hpp>
   
-  using namespace lightlib;
+  using namespace brazier;
   
   net::awaitable<void> fetch_users() {
       HttpClient client;
@@ -1556,7 +1556,7 @@ The SmtpClient uses environment variables for configuration:
 **Basic email sending**
 
 ```cpp
-#include <lightlib/App/Http/Helpers/SmtpClient.hpp>
+#include <brazier/App/Http/Helpers/SmtpClient.hpp>
 
 boost::asio::awaitable<void> sendEmail(const Request& req, Response& res, const Params& params) {
     SmtpClient smtp;
@@ -1629,7 +1629,7 @@ boost::asio::awaitable<void> sendVerificationEmail(const std::string& email, con
 **Complete registration with email**
 
 ```cpp
-class AuthController : public lightlib::Controller {
+class AuthController : public brazier::Controller {
 public:
     boost::asio::awaitable<void> register(const Request& req, Response& res, const Params& params) {
         auto body = nlohmann::json::parse(req.body());
