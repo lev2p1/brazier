@@ -72,19 +72,20 @@ void brazier::Server::run() {
         Logger::log("Starting " + std::to_string(threads_count) + " worker threads", "INFO");
 
         for (int i = 0; i < threads_count; ++i) {
-            threads_.emplace_back([this, i] {
+            threads_.emplace_back([this] {
                 io_.run();
-                });
+            });
         }
 
-        std::thread stats_thread([this] {
-            while (true) {
+        shutdown_flag_.store(false, std::memory_order_release);
+        stats_thread_ = std::thread([this] {
+            while (!shutdown_flag_.load(std::memory_order_acquire)) {
                 std::this_thread::sleep_for(10s);
+                if (shutdown_flag_.load(std::memory_order_acquire)) break;
                 Logger::log("STATS - Active connections: " + std::to_string(connection_count_.load()) +
                     ", Total requests: " + std::to_string(total_requests_.load()), "INFO");
             }
             });
-        stats_thread.detach();
 
         for (auto& t : threads_) {
             if (t.joinable()) {
@@ -99,8 +100,14 @@ void brazier::Server::run() {
 }
 
 void brazier::Server::stop() {
+    shutdown_flag_.store(true);
+
     work_guard_.reset();
     io_.stop();
+
+    if (stats_thread_.joinable()) {
+        stats_thread_.join();
+    }
     Logger::log("Server stopped", "INFO");
 }
 

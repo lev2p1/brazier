@@ -65,6 +65,9 @@ namespace brazier {
         std::atomic<int> connection_count_{ 0 };
         std::atomic<int> total_requests_{ 0 };
 
+        std::thread stats_thread_;                   
+        std::atomic<bool> shutdown_flag_{ false };
+
     public:
         Server(const std::string& host, unsigned short port);
 
