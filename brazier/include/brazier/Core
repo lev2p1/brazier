@@ -7,6 +7,7 @@
 #include "Router/Router.hpp"
 #include "Router/RouterRegisterer.hpp"
 #include "server.hpp"
+#include "HttpsServer.hpp"
 #include "Engine.hpp"
 #include "WebSocketServer.hpp"
 #include "vendor/ConfigManager.hpp"

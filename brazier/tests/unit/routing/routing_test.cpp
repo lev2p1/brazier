@@ -76,25 +76,37 @@ auto RunAsync(AsyncOp&& op) {
 }
 
 bool IsServerRunning() {
-    boost::asio::io_context io_context;
-    boost::asio::ip::tcp::socket socket(io_context);
-    boost::asio::ip::tcp::endpoint endpoint(
-        boost::asio::ip::make_address(host_global),
-        port_global
-    );
-    boost::system::error_code ec;
-    socket.connect(endpoint, ec);
-    return !ec;
+    try {
+        net::io_context io;
+        beast::tcp_stream stream(io);
+        tcp::resolver resolver(io);
+        auto results = resolver.resolve(host_global, std::to_string(port_global));
+
+        stream.expires_after(std::chrono::milliseconds(500));
+        stream.connect(results);
+        return true;
+    }
+    catch (...) {
+        return false;
+    }
 }
 
 class RoutingTest : public ::testing::Test {
 protected:
+    static void SetUpTestSuite() {
+        server_available_ = IsServerRunning();
+    }
+
     void SetUp() override {
-        if (!IsServerRunning()) {
+        if (!server_available_) {
             GTEST_SKIP() << "Server is not running";
         }
     }
+
+    static bool server_available_;
 };
+
+bool RoutingTest::server_available_ = false;
 
 TEST_F(RoutingTest, AddRouteAndGet) {
     std::string host = host_global;
