@@ -1698,3 +1698,86 @@ private:
     }
 };
 ```
+
+## Migrations for Database
+
+    The migration system is built on a template-based registry. Each migration is a separate class inheriting from BaseMigration<T>, and MigrationManager::migrateAll<>() iterates over the listed migration types, calls the static up() method on each, and executes the returned SQL statements. Everything else — ordering, registration, idempotency — is handled by the migration manager. A developer only needs to add a migration class and register it in the list.
+
+    All migration headers are included in the main entry point file. The same main entry point file also contains the migrateAll<>() call that triggers the migrations. This keeps the list of migrations and their execution in one place.
+
+### All migrations are included in a single shared header — the same file where the framework libraries are included. 
+
+#### Migaration header file example
+
+``` cpp
+#pragma once
+
+#include <iostream>
+#include <brazier/Core>   
+#include <brazier/DB>     
+#include "Router/RouteList.hpp"
+
+// Headers of all project migrations (you can use other path for migrations)
+#include "Database/Migrations/migration_users_create.hpp"
+#include "Database/Migrations/migration_teams_table.hpp"
+#include "Database/Migrations/migration_roles_table.hpp"
+#include "Database/Migrations/migration_backup_codes_table.hpp"
+#include "Database/Migrations/migrations_user_team_table.hpp"
+#include "Database/Migrations/migration_cached_data_create.hpp"
+#include "Database/Migrations/migration_report_create.hpp"
+#include "Database/Migrations/migration_pattern_create.hpp"
+```
+
+### Each migration is a class inheriting from BaseMigration<Itself> with two static methods:
+
+- **up()** — returns std::vector<std::string> with the SQL statements that apply the migration. The up() method is the "apply" phase of a migration. It does not touch the database directly — instead, it builds a list of SQL statements that MigrationManager will later send to the database
+
+- **down()** — returns the SQL statement that rolls the migration back.
+
+### Automatic Migration Execution
+
+All migrations are invoked centrally in main. The order of types in the template defines the order in which migrations are applied
+
+#### Migration execution 
+
+``` cpp
+auto manager = std::make_shared<brazier::MigrationManager>(db);
+manager->migrateAll<
+    MigrationUsersCreate,
+    MigrationUserTeamCreate,
+    MigrationBackupCodes,
+    MigrationRolesCreate,
+    MigrationTeamsCreate,
+    MigrationCachedDataCreate,
+    MigrationReportsCreate,
+    MigrationPatternsCreate>();
+```
+
+### Migration template
+
+``` cpp
+#pragma once
+
+#include <brazier/DB>
+
+using namespace brazier;
+
+class MigrationYourTableCreate : public BaseMigration<MigrationYourTableCreate> {
+public:
+    static std::vector<std::string> up() {
+        SQLSchemaBuilder builder("your_table");
+        std::vector<std::string> queries;
+
+        queries.push_back(builder
+            ... // here you need to use SQLSchemaBuilder methods
+            .CreateTable());
+
+        return queries;
+    }
+
+    static std::string down() {
+        SQLSchemaBuilder builder("your_table");
+        return builder.DropTable();
+    }
+};
+```
