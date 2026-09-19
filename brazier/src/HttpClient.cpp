@@ -316,7 +316,11 @@ namespace brazier {
             throw std::runtime_error("HTTPS read timeout");
         }
 
-        stream.shutdown(ec);
+        ec.clear();
+        co_await stream.async_shutdown(
+            net::cancel_after(
+                std::chrono::seconds(5),
+                net::redirect_error(net::use_awaitable, ec)));
 
         co_return res;
     }
@@ -325,7 +329,6 @@ namespace brazier {
         req.set(http::field::host, host);
         req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
         req.set(http::field::accept, "*/*");
-        req.set(http::field::connection, "close");
     }
 
     std::string HttpClient::json_to_query_string(const json& j) {

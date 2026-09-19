@@ -72,9 +72,40 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "brazierApp"}' > config_test.json
+        cat > config_test.json <<'EOF'
+        {
+          "app_name": "brazierApp",
+          "server": {
+            "host": "127.0.0.1",
+            "port": 3502
+          },
+          "https_server": {
+            "host": "127.0.0.1",
+            "port": 8443,
+            "tls": {
+              "cert_file": "brazier/app/certs/server.crt",
+              "key_file": "brazier/app/certs/server.key",
+              "ca_file": "",
+              "require_client_cert": false,
+              "verify_client_cert": false,
+              "handshake_timeout": 3,
+              "conf": []
+            }
+          }
+        }
+        EOF
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
+      shell: bash
+
+    - name: Generate self-signed certificate
+      run: |
+        mkdir -p build/brazier/app/certs
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes \
+          -keyout build/brazier/app/certs/server.key \
+          -out build/brazier/app/certs/server.crt \
+          -subj "/CN=localhost" \
+          -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
       shell: bash
 
     - name: Run tests
@@ -136,10 +167,41 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "brazierApp"}' > config_test.json
+        cat > config_test.json <<'EOF'
+        {
+          "app_name": "brazierApp",
+          "server": {
+            "host": "127.0.0.1",
+            "port": 3502
+          },
+          "https_server": {
+            "host": "127.0.0.1",
+            "port": 8443,
+            "tls": {
+              "cert_file": "brazier/app/certs/server.crt",
+              "key_file": "brazier/app/certs/server.key",
+              "ca_file": "",
+              "require_client_cert": false,
+              "verify_client_cert": false,
+              "handshake_timeout": 3,
+              "conf": []
+            }
+          }
+        }
+        EOF
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
       shell: bash
+
+    - name: Generate self-signed certificate (Windows)
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path "build/brazier/app/certs" | Out-Null
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes `
+          -keyout "build/brazier/app/certs/server.key" `
+          -out "build/brazier/app/certs/server.crt" `
+          -subj "/CN=localhost" `
+          -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 
     - name: Run tests
       working-directory: build
@@ -192,9 +254,40 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "brazierApp"}' > config_test.json
+        cat > config_test.json <<'EOF'
+        {
+          "app_name": "brazierApp",
+          "server": {
+            "host": "127.0.0.1",
+            "port": 3502
+          },
+          "https_server": {
+            "host": "127.0.0.1",
+            "port": 8443,
+            "tls": {
+              "cert_file": "brazier/app/certs/server.crt",
+              "key_file": "brazier/app/certs/server.key",
+              "ca_file": "",
+              "require_client_cert": false,
+              "verify_client_cert": false,
+              "handshake_timeout": 3,
+              "conf": []
+            }
+          }
+        }
+        EOF
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
+      shell: bash
+
+    - name: Generate self-signed certificate
+      run: |
+        mkdir -p build/brazier/app/certs
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes \
+          -keyout build/brazier/app/certs/server.key \
+          -out build/brazier/app/certs/server.crt \
+          -subj "/CN=localhost" \
+          -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
       shell: bash
 
     - name: Run tests

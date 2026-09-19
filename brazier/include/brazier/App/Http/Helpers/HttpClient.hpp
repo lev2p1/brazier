@@ -54,7 +54,13 @@ namespace brazier {
         using json = nlohmann::json;
 
         HttpClient();
+        HttpClient(const HttpClient&) = delete;
+        HttpClient& operator=(const HttpClient&) = delete;
+        HttpClient(HttpClient&&) = default;
+        HttpClient& operator=(HttpClient&&) = default;
+
         ~HttpClient() = default;
+
 
         net::awaitable<Response> get(const std::string& url, const json& body = json{});
         net::awaitable<Response> post(const std::string& url, const json& body);

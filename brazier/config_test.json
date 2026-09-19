@@ -3,15 +3,25 @@
     "host": "0.0.0.0",
     "port": 3502
   },
+  "https_server": {
+    "host": "0.0.0.0",
+    "port": 8443,
+    "tls": {
+      "cert_file": "app/certs/server.crt",
+      "key_file": "app/certs/server.key",
+      "ca_file": "",
+      "require_client_cert": false,
+      "verify_client_cert": false,
+      "handshake_timeout": 3,
+      "conf": [
+      ]
+    }
+  },
   "app_name": "brazierApp",
   "filesystem": {
     "drivers": {
-      "local": {
-        "root": "./storage"
-      },
-      "root": {
-        "root": "./"
-      },
+      "local": { "root": "./storage" },
+      "root": { "root": "./" },
       "default": "local"
     }
   }

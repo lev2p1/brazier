@@ -11,6 +11,7 @@ The framework combines the power of Boost.Asio with modern C++20/23 features.
 - **JWT authentication** support
 - **Redis caching**
 - **WebSockets** technology support
+- **HTTPS / TLS** support with SNI, ALPN-ready, mTLS
 - **High performance** with minimal overhead
 
 ## Requirements
@@ -221,6 +222,19 @@ sh build.sh
     "host": "0.0.0.0",
     "port": 3501,
     "keep-alive-timeout": 60
+  },
+  "https_server": {
+    "host": "0.0.0.0",
+    "port": 8443,
+    "tls": {
+      "cert_file": "app/certs/server.crt",
+      "key_file": "app/certs/server.key",
+      "ca_file": "",
+      "require_client_cert": false,
+      "verify_client_cert": false,
+      "handshake_timeout": 15,
+      "conf": []
+    }
   },
   "database": {
     "host": "127.0.0.1",
@@ -471,6 +485,307 @@ boost::asio::awaitable<void> createUser(const Request& req, Response& res, const
     co_return;
 }
 ```
+
+## Brazier HTTPS Server
+
+Brazier ships with a first-class HTTPS server built on **Boost.Beast + Boost.Asio + OpenSSL**.
+It is API-compatible with the plain HTTP `Server` class, so switching between them — or running
+both — is a matter of a couple of lines in your `main`.
+
+### Features
+
+- **TLS 1.2 / 1.3** by default, with per-server override via `conf`
+- **SNI-aware** (Server Name Indication) — future multi-cert scenarios are possible
+- **HSTS** header sent automatically on every response
+- **Keep-alive** over TLS with configurable idle timeout
+- **Graceful shutdown** with `close_notify` and 5-second shutdown timeout
+- **Handshake timeout** to protect against Slowloris-style attacks
+- **mTLS** (mutual TLS / client certificates) with custom CA
+- **Raw OpenSSL tuning** through `SSL_CONF_cmd` — no code changes needed for cipher / protocol changes
+- **Same Router / Engine / Middleware** as the HTTP server — routing code is transport-agnostic
+
+### Requirements
+
+- **OpenSSL** 3.x (via vcpkg — `openssl` package)
+- **Boost** 1.82+ (needs `boost::asio::cancel_after`)
+- A **PEM-encoded** certificate and private key
+
+### Configuration
+
+Add an `https_server` section to your `config.json` alongside the existing `server` section:
+
+```json
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 3501,
+    "keep-alive-timeout": 60
+  },
+  "https_server": {
+    "host": "0.0.0.0",
+    "port": 8443,
+    "tls": {
+      "cert_file": "app/certs/server.crt",
+      "key_file": "app/certs/server.key",
+      "ca_file": "",
+      "require_client_cert": false,
+      "verify_client_cert": false,
+      "handshake_timeout": 15,
+      "conf": []
+    }
+  }
+}
+```
+
+#### TLS section reference
+
+| Key                    | Type      | Default   | Description |
+|------------------------|-----------|-----------|-------------|
+| `cert_file`            | `string`  | `server.crt` | Path to PEM certificate chain (leaf + intermediates) |
+| `key_file`             | `string`  | `server.key` | Path to PEM private key |
+| `ca_file`              | `string`  | `""`      | Path to CA bundle — only needed for mTLS |
+| `require_client_cert`  | `bool`    | `false`   | Reject connections without a client certificate |
+| `verify_client_cert`   | `bool`    | `false`   | Verify client certificate if presented (but don't require) |
+| `handshake_timeout`    | `int`     | `15`      | Seconds to wait for TLS handshake before closing |
+| `conf`                 | `array`   | `[]`      | Raw `SSL_CONF_cmd` commands — see below |
+
+> **Note:** paths in `cert_file` / `key_file` / `ca_file` are resolved relative to the
+> **current working directory** of the process, not the `config.json` file. Either run the binary
+> from the project root, or use absolute paths. On Windows, always use forward slashes
+> (`"C:/certs/server.crt"`) — backslashes are escape characters in JSON.
+
+### Generating certificates
+
+#### Development (self-signed)
+
+The simplest way to get a working dev certificate — a self-signed cert valid for `localhost`:
+
+```bash
+mkdir -p app/certs
+openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes \
+    -keyout app/certs/server.key \
+    -out app/certs/server.crt \
+    -subj "/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+```
+
+On **Windows `cmd.exe`** the same command must be on a single line (no `\` continuation) —
+use `^` for line continuation, or paste it as one long line.
+
+Browsers will warn about the self-signed certificate. To silence the warning for development,
+add the certificate to the **current user** root store on Windows:
+
+```cmd
+certutil -addstore -user Root app\certs\server.crt
+```
+
+And remove it later with:
+
+```cmd
+certutil -user -delstore Root localhost
+```
+
+> **Do not commit certificates to git.** Add `certs/`, `app/certs/`, `*.key`, `*.pem`, `*.crt`
+> to `.gitignore`. Each developer generates their own dev certificate.
+
+#### Production (Let's Encrypt)
+
+For a public domain, use Let's Encrypt. **Use the staging environment first** — it has much
+higher rate limits and won't lock you out if you misconfigure something:
+
+```bash
+# Linux / macOS
+sudo certbot certonly --standalone --test-cert -d example.com
+```
+
+On Windows the recommended clients are `win-acme` and `Certify The Web`. Enable staging mode
+(in `win-acme` — pass `--test`; in Certify — Settings → Certificate Authorities → Use Staging Mode).
+
+Point the config at the resulting PEM files:
+
+```json
+"tls": {
+  "cert_file": "/etc/letsencrypt/live/example.com/fullchain.pem",
+  "key_file":  "/etc/letsencrypt/live/example.com/privkey.pem"
+}
+```
+
+> **Always use `fullchain.pem`, not `cert.pem`** — clients need the intermediate certificates
+> to build a valid chain.
+
+### Using the HTTPS server
+
+```cpp
+#include "../include/brazier/Core"
+#include "../include/brazier/DB"
+#include "../include/brazier/Http"
+#include "../include/brazier/Engine.hpp"
+
+int main() {
+    try {
+        brazier::ConfigManager::initGlobal("config.json");
+        brazier::global_config->setAutoSave(false);
+
+        std::string host = brazier::global_config->get("https_server.host", "0.0.0.0");
+        int port         = brazier::global_config->get("https_server.port", 8443);
+
+        brazier::HttpsServer server(host, port);
+
+        if (!server.initialize()) return 1;
+        server.run();   // blocks until stop()
+
+        return 0;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Fatal error: " << e.what() << std::endl;
+        return 1;
+    }
+}
+```
+
+`HttpsServer` reads everything it needs from `https_server.*` in `global_config`:
+host, port, TLS settings, `conf` array, handshake timeout, mTLS flags. You don't pass
+them explicitly — just make sure `ConfigManager::initGlobal()` is called first.
+
+### Overriding TLS programmatically
+
+Sometimes you don't want to put TLS configuration in the JSON at all — for example, when the
+certificate path is only known at runtime, or when you're building multiple `HttpsServer`
+instances with different certificates:
+
+```cpp
+brazier::HttpsServer::TlsConfig tls;
+tls.cert_file = "/var/lib/myapp/api.crt";
+tls.key_file  = "/var/lib/myapp/api.key";
+tls.conf = {
+    { "min_protocol", "TLSv1.3" }
+};
+tls.handshake_timeout = std::chrono::seconds(10);
+
+brazier::HttpsServer api("0.0.0.0", 9443, tls);
+api.initialize();
+api.run();
+```
+
+When `TlsConfig` is passed explicitly, `https_server.tls.*` from the JSON is ignored
+entirely — the code-level config wins.
+
+### Mutual TLS (mTLS)
+
+mTLS requires the client to present a certificate signed by a CA you trust. This is common
+for service-to-service communication, IoT devices, and internal APIs.
+
+1. Enable it in the config:
+
+```json
+"tls": {
+  "cert_file": "app/certs/server.crt",
+  "key_file":  "app/certs/server.key",
+  "ca_file":   "app/certs/ca.crt",
+  "require_client_cert": true
+}
+```
+
+2. Generate a CA, a server certificate, and a client certificate:
+
+```bash
+# CA
+openssl genrsa -out ca.key 4096
+openssl req -x509 -new -nodes -key ca.key -sha256 -days 1825 \
+    -out ca.crt -subj "/CN=My Internal CA"
+
+# Server cert
+openssl genrsa -out server.key 2048
+openssl req -new -key server.key -out server.csr -subj "/CN=localhost"
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+    -out server.crt -days 365 -sha256 \
+    -extfile <(printf "subjectAltName=DNS:localhost,IP:127.0.0.1")
+
+# Client cert
+openssl genrsa -out client.key 2048
+openssl req -new -key client.key -out client.csr -subj "/CN=brazier-client"
+openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+    -out client.crt -days 365 -sha256 \
+    -extfile <(printf "extendedKeyUsage=clientAuth")
+```
+
+3. Clients (including brazier's own `HttpClient`) must now present `client.crt` + `client.key`.
+Without them the TLS handshake is aborted before any HTTP request is processed.
+
+### What the server does automatically
+
+For every response, `HttpsServer` sets:
+
+| Header | Value | Why |
+|---|---|---|
+| `Server` | `brazier` | Identifies the framework |
+| `Strict-Transport-Security` | `max-age=31536000` | HSTS — instructs browsers to use HTTPS for one year |
+| `Connection` | `keep-alive` or `close` | Matches the request |
+
+You don't need to set these in your controllers.
+
+### Lifecycle and timeouts
+
+| Phase | Timeout | Config key |
+|---|---|---|
+| TLS handshake | 15 s | `https_server.tls.handshake_timeout` |
+| Idle keep-alive | 60 s | `keep-alive-timeout` (top-level) |
+| Graceful TLS shutdown | 5 s | — |
+
+If any of these fire, the connection is closed cleanly — you'll see a corresponding
+`[DEBUG] HTTPS client disconnected` line in the log, not an error.
+
+### Testing TLS
+
+From the command line:
+
+```bash
+# Basic request (accepts self-signed)
+curl -vk https://localhost:8443/
+
+# Strict verification against your own CA
+curl -v --cacert app/certs/server.crt https://localhost:8443/
+
+# Inspect the handshake
+openssl s_client -connect localhost:8443 -servername localhost
+
+# Verify TLS 1.1 is rejected
+openssl s_client -connect localhost:8443 -tls1_1
+```
+
+From brazier's own test suite:
+
+```cpp
+#include "brazier/App/Http/Helpers/HttpClient.hpp"
+
+net::awaitable<void> fetch_secure() {
+    brazier::HttpClient client;
+    client.set_verify_ssl(false);   // dev only
+
+    auto res = co_await client.get("https://localhost:8443/api/health");
+    if (client.is_success(res)) {
+        // ...
+    }
+}
+```
+
+### Common pitfalls
+
+- **`use_certificate_chain_file: cannot find the file`** — the path in `cert_file` is
+  relative to the process's *current working directory*, not the config file. Run from the
+  project root or use absolute paths.
+
+- **`SSL_CONF_cmd failed for 'min_protocol=...'`** — some OpenSSL builds (particularly
+  via vcpkg) don't register `min_protocol` in `SSL_CONF_cmd`. Brazier handles this internally
+  by calling `SSL_CTX_set_min_proto_version` directly — the `conf` entry is a no-op there,
+  but you can safely keep it for documentation purposes.
+
+- **Browser says "certificate not trusted"** — that's expected for self-signed certificates.
+  Either click through the warning, add the cert to the user root store (see above), or use
+  a real certificate from Let's Encrypt.
+
+- **`WSAECONNRESET` / `WSAECONNABORTED` in logs** — these are normal client disconnect events,
+  not errors. Brazier logs them at `DEBUG` level.
 
 ## Brazier WebSocket Routing System
 
