@@ -51,7 +51,6 @@ bool brazier::Server::initialize() {
 
         initializeConnections();
         RouterRegisterer::init(io_);
-        Engine::init(io_);
 
         Logger::log("Server initialized on " + host_ + ":" + std::to_string(port_), "SUCCESS");
         return true;
@@ -73,8 +72,9 @@ void brazier::Server::run() {
 
         for (int i = 0; i < threads_count; ++i) {
             threads_.emplace_back([this] {
+                brazier::Engine::init(io_);
                 io_.run();
-            });
+                });
         }
 
         shutdown_flag_.store(false, std::memory_order_release);

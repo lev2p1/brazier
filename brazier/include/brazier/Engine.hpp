@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with brazier; if not, see <https://www.gnu.org/licenses/>.
  */
-
 #pragma once
 
 #include <boost/asio/io_context.hpp>
@@ -28,12 +27,10 @@ namespace brazier {
     class Engine {
     public:
         static boost::asio::io_context& get_io_context();
-        static inline void init(boost::asio::io_context& io_ctx) {
-            Engine::io_ctx_ptr_ = &io_ctx;
-        }
+        static void init(boost::asio::io_context& io_ctx);
 
     private:
-        static inline boost::asio::io_context* io_ctx_ptr_ = nullptr;
+        static boost::asio::io_context*& io_ctx_ptr();
     };
 
     inline std::shared_ptr<brazier::ConfigManager> global_config = nullptr;

@@ -72,9 +72,69 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "brazierApp"}' > config_test.json
+        cat > config_test.json <<'EOF'
+        {
+          "app_name": "brazierApp",
+          "https_server": {
+            "host": "0.0.0.0",
+            "port": 8443,
+            "tls": {
+              "cert_file": "brazier/app/certs/server.crt",
+              "key_file": "brazier/app/certs/server.key",
+              "ca_file": "",
+              "require_client_cert": false,
+              "verify_client_cert": false,
+              "handshake_timeout": 3,
+              "conf": []
+            }
+          },
+          "http": {
+            "max_connections_testing": 20,
+            "max_body_size_testing": 1048576,
+            "max_header_size_testing": 8192
+          }
+        }
+        EOF
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
+      shell: bash
+
+    - name: Generate self-signed certificate (main server)
+      run: |
+        mkdir -p build/brazier/app/certs
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes \
+          -keyout build/brazier/app/certs/server.key \
+          -out build/brazier/app/certs/server.crt \
+          -subj "/CN=localhost" \
+          -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+      shell: bash
+
+    - name: Generate mTLS certificates (CA + client)
+      run: |
+        set -e
+        mkdir -p build/certs
+        cd build/certs
+
+        openssl genrsa -out ca.key 4096
+        openssl req -x509 -new -nodes -key ca.key -sha256 -days 1825 \
+          -out ca.crt -subj "/CN=Test CA"
+
+        openssl genrsa -out server.key 2048
+        openssl req -new -key server.key -out server.csr -subj "/CN=localhost"
+        echo "subjectAltName=DNS:localhost,IP:127.0.0.1" > server_ext.cnf
+        openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
+          -CAcreateserial -out server.crt -days 365 -sha256 \
+          -extfile server_ext.cnf
+
+        openssl genrsa -out client.key 2048
+        openssl req -new -key client.key -out client.csr -subj "/CN=brazier-client"
+        echo "extendedKeyUsage=clientAuth" > client_ext.cnf
+        openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key \
+          -CAserial ca.srl -out client.crt -days 365 -sha256 \
+          -extfile client_ext.cnf
+
+        openssl verify -CAfile ca.crt server.crt
+        openssl verify -CAfile ca.crt client.crt
       shell: bash
 
     - name: Run tests
@@ -136,10 +196,66 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "brazierApp"}' > config_test.json
+        cat > config_test.json <<'EOF'
+        {
+          "app_name": "brazierApp",
+          "https_server": {
+            "host": "0.0.0.0",
+            "port": 8443,
+            "tls": {
+              "cert_file": "brazier/app/certs/server.crt",
+              "key_file": "brazier/app/certs/server.key",
+              "ca_file": "",
+              "require_client_cert": false,
+              "verify_client_cert": false,
+              "handshake_timeout": 3,
+              "conf": []
+            }
+          },
+          "http": {
+            "max_connections_testing": 20,
+            "max_body_size_testing": 1048576,
+            "max_header_size_testing": 8192
+          }
+        }
+        EOF
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
       shell: bash
+
+    - name: Generate self-signed certificate (main server)
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path "build/brazier/app/certs" | Out-Null
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes `
+          -keyout "build/brazier/app/certs/server.key" `
+          -out "build/brazier/app/certs/server.crt" `
+          -subj "/CN=localhost" `
+          -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+
+    - name: Generate mTLS certificates (CA + client)
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path "build/certs" | Out-Null
+        Push-Location build/certs
+
+        openssl genrsa -out ca.key 4096
+        openssl req -x509 -new -nodes -key ca.key -sha256 -days 1825 -out ca.crt -subj "/CN=Test CA"
+
+        openssl genrsa -out server.key 2048
+        openssl req -new -key server.key -out server.csr -subj "/CN=localhost"
+        Set-Content -Path server_ext.cnf -Value "subjectAltName=DNS:localhost,IP:127.0.0.1"
+        openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 365 -sha256 -extfile server_ext.cnf
+
+        openssl genrsa -out client.key 2048
+        openssl req -new -key client.key -out client.csr -subj "/CN=brazier-client"
+        Set-Content -Path client_ext.cnf -Value "extendedKeyUsage=clientAuth"
+        openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAserial ca.srl -out client.crt -days 365 -sha256 -extfile client_ext.cnf
+
+        openssl verify -CAfile ca.crt server.crt
+        openssl verify -CAfile ca.crt client.crt
+
+        Pop-Location
 
     - name: Run tests
       working-directory: build
@@ -192,9 +308,71 @@ jobs:
     - name: Create config_test.json
       working-directory: build
       run: |
-        echo '{"app_name": "brazierApp"}' > config_test.json
+        cat > config_test.json <<'EOF'
+        {
+          "app_name": "brazierApp",
+          "https_server": {
+            "host": "0.0.0.0",
+            "port": 8443,
+            "tls": {
+              "cert_file": "brazier/app/certs/server.crt",
+              "key_file": "brazier/app/certs/server.key",
+              "ca_file": "",
+              "require_client_cert": false,
+              "verify_client_cert": false,
+              "handshake_timeout": 3,
+              "conf": []
+            }
+          },
+          "http": {
+            "max_connections_testing": 20,
+            "max_body_size_testing": 1048576,
+            "max_header_size_testing": 8192
+          }
+        }
+        EOF
         mkdir -p ${{ matrix.build_type }}
         cp config_test.json ${{ matrix.build_type }}/
+      shell: bash
+
+    - name: Generate self-signed certificate (main server)
+      run: |
+        mkdir -p build/brazier/app/certs
+        cd build/brazier/app/certs
+        echo "subjectAltName=DNS:localhost,IP:127.0.0.1" > server_ext.cnf
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes \
+          -keyout server.key -out server.crt \
+          -subj "/CN=localhost" \
+          -extensions v3_req \
+          -config <(cat /etc/ssl/openssl.cnf; echo "[v3_req]"; echo "subjectAltName=DNS:localhost,IP:127.0.0.1")
+      shell: bash
+
+    - name: Generate mTLS certificates (CA + client)
+      run: |
+        set -e
+        mkdir -p build/certs
+        cd build/certs
+
+        openssl genrsa -out ca.key 4096
+        openssl req -x509 -new -nodes -key ca.key -sha256 -days 1825 \
+          -out ca.crt -subj "/CN=Test CA"
+
+        openssl genrsa -out server.key 2048
+        openssl req -new -key server.key -out server.csr -subj "/CN=localhost"
+        echo "subjectAltName=DNS:localhost,IP:127.0.0.1" > server_ext.cnf
+        openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
+          -CAcreateserial -out server.crt -days 365 -sha256 \
+          -extfile server_ext.cnf
+
+        openssl genrsa -out client.key 2048
+        openssl req -new -key client.key -out client.csr -subj "/CN=brazier-client"
+        echo "extendedKeyUsage=clientAuth" > client_ext.cnf
+        openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key \
+          -CAserial ca.srl -out client.crt -days 365 -sha256 \
+          -extfile client_ext.cnf
+
+        openssl verify -CAfile ca.crt server.crt
+        openssl verify -CAfile ca.crt client.crt
       shell: bash
 
     - name: Run tests

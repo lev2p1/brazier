@@ -21,6 +21,9 @@ endif()
 
 if(MSVC)
     add_compile_options(/utf-8 /bigobj)
+
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
 endif()
 
 find_package(Boost CONFIG REQUIRED COMPONENTS beast asio system thread filesystem)
@@ -46,15 +49,46 @@ set(LIBRARIES
     OpenSSL::Crypto
 )
 
-file(GLOB_RECURSE PROJECT_SOURCES
-    "src/*.cpp"
-    "src/Database/*.cpp"
-    "src/Database/Migrations/*.cpp"
-    "src/Router/*.cpp"
-    "src/Filesystem/*.cpp"
-    "src/Cryptography/*.cpp"
-)
+if(WIN32)
+    set(BRAZIER_PLATFORM_DIR "Windows")
+elseif(APPLE)
+    set(BRAZIER_PLATFORM_DIR "MacOS")
+else()
+    set(BRAZIER_PLATFORM_DIR "Linux")
+endif()
+
+message(STATUS "brazier: platform = ${BRAZIER_PLATFORM_DIR}")
+
+file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
+
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX "^src/Platform/")
+
+file(GLOB_RECURSE BRAZIER_PLATFORM_SOURCES CONFIGURE_DEPENDS
+    "src/Platform/${BRAZIER_PLATFORM_DIR}/*.cpp")
+
+if(NOT BRAZIER_PLATFORM_SOURCES)
+    message(FATAL_ERROR
+        "No platform sources found in src/Platform/${BRAZIER_PLATFORM_DIR}/")
+endif()
+
+list(APPEND PROJECT_SOURCES ${BRAZIER_PLATFORM_SOURCES})
+
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX "app/Main\\.cpp$")
+
+function(brazier_hide_platform platform)
+    if(platform STREQUAL BRAZIER_PLATFORM_DIR)
+        return()
+    endif()
+    file(GLOB_RECURSE OTHER "src/Platform/${platform}/*.cpp")
+    if(OTHER)
+        set_source_files_properties(${OTHER}
+            PROPERTIES HEADER_FILE_ONLY TRUE)
+    endif()
+endfunction()
+
+brazier_hide_platform(Linux)
+brazier_hide_platform(MacOS)
+brazier_hide_platform(Windows)
 
 add_library(brazier_objects OBJECT ${PROJECT_SOURCES})
 
@@ -134,13 +168,13 @@ target_compile_definitions(brazier_app PRIVATE
     BOOST_ASIO_HAS_STD_COROUTINE
 )
 
-target_link_libraries(brazier_app PRIVATE 
+target_link_libraries(brazier_app PRIVATE
     brazier_static
     ${LIBRARIES}
 )
 
 add_library(brazier INTERFACE)
-target_link_libraries(brazier INTERFACE 
+target_link_libraries(brazier INTERFACE
     brazier_static
     brazier_shared
 )
@@ -166,7 +200,7 @@ install(DIRECTORY include/ DESTINATION include)
 install(EXPORT brazierTargets
     NAMESPACE brazier::
     DESTINATION share/brazier
-    FILE brazierTargets.cmake      
+    FILE brazierTargets.cmake
 )
 
 install(
@@ -178,12 +212,14 @@ option(BUILD_TESTS "Build tests" ON)
 
 if(BUILD_TESTS)
     message(STATUS "Building tests")
-    
+
     find_package(GTest CONFIG REQUIRED)
 
     get_target_property(GTEST_INCLUDE_DIRS GTest::gtest INTERFACE_INCLUDE_DIRECTORIES)
 
-    file(GLOB_RECURSE TEST_SOURCES "tests/*.cpp")
+    file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS
+        "tests/*.cpp"
+    )
 
     add_executable(brazier_tests ${TEST_SOURCES})
 
@@ -199,12 +235,12 @@ if(BUILD_TESTS)
         ${OPENSSL_INCLUDE_DIR}
         ${GTEST_INCLUDE_DIRS}
     )
-    
+
     target_compile_definitions(brazier_tests PRIVATE
         BOOST_ASIO_HAS_CO_AWAIT
         BOOST_ASIO_HAS_STD_COROUTINE
     )
-    
+
     target_compile_features(brazier_tests PRIVATE cxx_std_20)
 
     target_link_libraries(brazier_tests PRIVATE
@@ -216,16 +252,11 @@ if(BUILD_TESTS)
         ${LIBRARIES}
     )
 
-    # include(GoogleTest)
-    # gtest_discover_tests(brazier_tests)
-
-    # add_test(NAME brazier_tests COMMAND brazier_tests)
-
     add_custom_target(check
         COMMAND $<TARGET_FILE:brazier_tests>
         DEPENDS brazier_tests
         COMMENT "Running tests..."
     )
-    
+
     message(STATUS "Tests configured. Run 'cmake --build . --target check' to run tests")
 endif()

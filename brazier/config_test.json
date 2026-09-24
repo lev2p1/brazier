@@ -1,17 +1,37 @@
 {
+  "app_name": "brazierApp",
   "server": {
     "host": "0.0.0.0",
     "port": 3502
   },
-  "app_name": "brazierApp",
+  "https_server": {
+    "host": "0.0.0.0",
+    "port": 8443,
+    "tls": {
+      "cert_file": "app/certs/server.crt",
+      "key_file": "app/certs/server.key",
+      "ca_file": "",
+      "require_client_cert": false,
+      "verify_client_cert": false,
+      "handshake_timeout": 3,
+      "conf": []
+    },
+    "hsts": {
+      "enabled": true,
+      "header": "max-age=31536000"
+    }
+  },
+  "protocol": {
+    "keep_alive_timeout": 60,
+
+    "max_connections_testing": 100,
+    "max_body_size_testing": 1048576,
+    "max_header_size_testing": 8192
+  },
   "filesystem": {
     "drivers": {
-      "local": {
-        "root": "./storage"
-      },
-      "root": {
-        "root": "./"
-      },
+      "local": { "root": "./storage" },
+      "root": { "root": "./" },
       "default": "local"
     }
   }
